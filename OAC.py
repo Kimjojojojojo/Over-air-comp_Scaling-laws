@@ -31,10 +31,6 @@ def OAC(K, P, sigma, h):
     for k in range(i_star+1, K):
         b[k] = 1 / (a[i_star] * h[k])
 
-    c = np.zeros(K) # ch inverse pre-processing
-    for k in range(K):
-        c[k] = 1 / (a[i_star] * h[k])
-
     MSE = np.zeros(K) # MSE of sum
     for i in range(K):
         tmp1 = np.sum([ (a[i] * h[k] * np.sqrt(P) - 1)**2 for k in range(i+1) ])
@@ -49,13 +45,34 @@ def OAC_CH_inversion(K, P, sigma, h): # i_star = 1
     b = np.zeros(K)
     a = 0
     for k in range(K):
-        b[k] = np.sqrt(P) * (h[1] / h[k])
-    a = 1 / (np.sqrt(P) * h[1])
+        b[k] = np.sqrt(P) * (h[0] / h[k])
+    a = 1 / (np.sqrt(P) * h[0])
 
-    MSE_OAC = np.zeros(K)  # MSE of sum
-    for i in range(K):
-        tmp1 = np.sum([(a[i] * h[k] * np.sqrt(P) - 1) ** 2 for k in range(i + 1)])
-        tmp2 = sigma * a[i] ** 2
-        MSE_OAC[i] = tmp1 + tmp2
+    # tmp1 = np.sum([(a * h[k] * b[k] - 1) ** 2 for k in range(K)])
+    # print(tmp1)
+    tmp2 = sigma * (a ** 2)
+    MSE =  tmp2
+    #print(MSE, P, h)
+    PW = np.sum(np.abs(b) ** 2)  # Power
 
-    PW_OAC = np.sum(np.abs(b) ** 2)  # Power
+    return MSE, PW
+
+
+def OAC_Energy_greedy(K, P, sigma, h): # i_star = K
+    b = np.full(K, np.sqrt(P))
+
+    tmp1 = 1 / (np.sqrt(P) * h[-1])
+    tmp2_1 = np.sum(h)
+    tmp2_2 = np.sum(h**2)
+    tmp2 = (np.sqrt(P) * tmp2_1) / (sigma + P * tmp2_2)
+
+    a = min(tmp1, tmp2)
+
+    tmp3 = np.sum([(a * h[k] * b[k] - 1) ** 2 for k in range(K)])
+    tmp4 = sigma * (a ** 2)
+    MSE = tmp3 + tmp4
+    # print(MSE, P, h)
+    PW = np.sum(np.abs(b) ** 2)  # Power
+
+    return MSE, PW
+
