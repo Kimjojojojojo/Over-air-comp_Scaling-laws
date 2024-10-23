@@ -25,21 +25,30 @@ def OAC(K, P, sigma, h):
             a[k] = g[k]
     a_star = a[i_star] # optimal a
 
-    b = np.zeros(K) # pre-processing of each user
-    for k in range(i_star+1):
-        b[k] = np.sqrt(P)
-    for k in range(i_star+1, K):
-        b[k] = 1 / (a[i_star] * h[k])
+    b = np.zeros((K,K)) # pre-processing of each user
+    for i in range(K):
+        for k in range(i+1):
+            b[i][k] = np.sqrt(P)
+        for k in range(i+1, K):
+            b[i][k] = 1 / (a[i] * h[k])
+
+    for k in range(K):
+        if b[i_star][k] > P:
+            print(f'[OAC]no valid b:{b[i_star][k]}')
 
     MSE = np.zeros(K) # MSE of sum
     for i in range(K):
-        tmp1 = np.sum([ (a[i] * h[k] * np.sqrt(P) - 1)**2 for k in range(i+1) ])
+        tmp1 = np.sum([(a[i] * h[k] * b[i][k] - 1)**2 for k in range(K)])
         tmp2 = sigma * a[i]**2
+        # tmp3 = np.sum([(a[i] * h[k] * b[i][k] - 1)**2 for k in range(K)])
+        # tmp4 = sigma * a[i]**2
         MSE[i] = tmp1 + tmp2
 
-    PW = np.sum(np.abs(b)**2) # Power
+    PW = np.zeros(K)
+    for k in range(K):
+        PW[k] = np.sum(np.abs(b[k])**2) # Power
 
-    return MSE, PW, i_star
+    return MSE/K, PW, i_star
 
 def OAC_CH_inversion(K, P, sigma, h): # i_star = 1
     b = np.zeros(K)
@@ -55,7 +64,7 @@ def OAC_CH_inversion(K, P, sigma, h): # i_star = 1
     #print(MSE, P, h)
     PW = np.sum(np.abs(b) ** 2)  # Power
 
-    return MSE, PW
+    return MSE/K, PW
 
 
 def OAC_Energy_greedy(K, P, sigma, h): # i_star = K
@@ -74,5 +83,31 @@ def OAC_Energy_greedy(K, P, sigma, h): # i_star = K
     # print(MSE, P, h)
     PW = np.sum(np.abs(b) ** 2)  # Power
 
-    return MSE, PW
+    return MSE/K, PW
 
+def first_i(K, P, sigma, h, idx):
+    i = 0
+    if idx == 1:
+        i = max(1, int(np.floor(np.sqrt(K))))
+    if idx == 2:
+        i = max(1, int(np.floor(K / 2)))
+
+    a = (1/h[i] + 1/h[i-1])/(2*np.sqrt(P))
+
+    b = np.zeros(K)  # pre-processing of each user
+    for k in range(i):
+        b[k] = np.sqrt(P)
+    for k in range(i, K):
+        b[k] = 1 / (a * h[k])
+
+    for k in range(K):
+        if b[k]**2 > P+0.1:
+            print(f'[first_i{idx}]no valid b:{b[k]**2}')
+
+    tmp1 = np.sum([(a * h[k] * b[k] - 1) ** 2 for k in range(K)])
+    tmp2 = sigma * (a ** 2)
+    MSE = tmp1 + tmp2
+    # print(MSE, P, h)
+    PW = np.sum(np.abs(b) ** 2)  # Power
+
+    return MSE/K, PW
